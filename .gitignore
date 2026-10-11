@@ -10,6 +10,7 @@
 /*.wav
 /*.svp
 /*.lyrb
+/*.txt
 
 # Editor / environment
 .venv/

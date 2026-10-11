@@ -67,3 +67,23 @@ func TestIntroCredits(t *testing.T) {
 		t.Errorf("credits = %q", c)
 	}
 }
+
+func TestPlainText(t *testing.T) {
+	s := &lyr.Song{Tokens: []lyr.Token{
+		{Start: 1000, End: 1500, Text: "twin", Break: lyr.BreakStanza},
+		{Start: 1500, End: 2000, Text: "kle", Join: true},
+		{Start: 2000, End: 2500, Text: "star"},
+		{Start: 2100, End: 2400, Text: "ooh", Backing: true},
+		{Start: 3000, End: 3500, Text: "how", Break: lyr.BreakLine},
+		{Start: 4000, End: 4200, Text: "x", Break: lyr.BreakLine, Hidden: true},
+		{Start: 65430, End: 66000, Text: "up", Break: lyr.BreakStanza},
+	}}
+	want := "twinkle star (ooh)\nhow\n\nup\n"
+	if got := PlainText(s, false); got != want {
+		t.Errorf("PlainText = %q, want %q", got, want)
+	}
+	want = "[00:01.00] twinkle star (ooh)\n[00:03.00] how\n\n[01:05.43] up\n"
+	if got := PlainText(s, true); got != want {
+		t.Errorf("PlainText timestamps = %q, want %q", got, want)
+	}
+}

@@ -20,6 +20,7 @@ lyric-engine edit   song.svp|song.lyrb       # open a file directly
 lyric-engine play   song.lyrb                # final full-screen display
 lyric-engine import song.svp [-bars 4 ...]   # convert without the TUI
 lyric-engine info   song.svp|song.lyrb       # list tracks / arranged lines
+lyric-engine txt    song.svp|song.lyrb       # export the lyrics as a plain .txt
 ```
 
 ## Parsing
@@ -42,6 +43,13 @@ Choosing an `.svp` opens **parse settings**. It shows a live preview of the line
 Notes with lyric `-` (melisma) or `+` (next syllable of a word) extend the previous word. `br`, `sil`, `sp`, `pau`, `cl`, `'`, and `.phoneme` notes are dropped. Adjacent CJK syllables are joined without spaces. A stanza clears the screen during the instrumental gap before it.
 
 The karaoke wipe follows the SVP notes. Each syllable note of a word (the word note and each `+`) fills an equal share of its letters over exactly that note's duration. `-` notes extend the syllable before them, and the wipe pauses during rests between a word's notes.
+
+## Text export
+
+`lyric-engine txt song.svp` writes `song.txt` next to it: one lyric line per line and a blank line between stanzas, with backing vocals in (brackets). It takes the same parse flags as `import` (`-mode rests`, `-bars 2`, `-backing 1`, ...). Give it a `.lyrb` instead to export the lines exactly as you arranged them in the editor.
+
+- `-timestamps`: start each line with its time as `[mm:ss.xx]`.
+- `-o file.txt`: a different output file, or `-o -` to print to the terminal. `-f` overwrites an existing file.
 
 ## Backing vocals
 

@@ -400,6 +400,29 @@ func LineText(s *lyr.Song, li int) string {
 	return b.String()
 }
 
+// PlainText is the song's lyrics as plain text: one line per lyric line and
+// a blank line between stanzas. With timestamps, each line is prefixed with
+// its start time as [mm:ss.xx].
+func PlainText(s *lyr.Song, timestamps bool) string {
+	var b strings.Builder
+	for i, l := range s.Lines() {
+		text := LineText(s, i)
+		if text == "" {
+			continue
+		}
+		if l.Stanza && b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		if timestamps {
+			cs := l.Start / 10
+			fmt.Fprintf(&b, "[%02d:%02d.%02d] ", cs/6000, cs/100%60, cs%100)
+		}
+		b.WriteString(text)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
 // currentLine renders line li with a karaoke wipe at time t.
 func currentLine(s *lyr.Song, li int, t int64, th Theme) string {
 	l := s.Lines()[li]

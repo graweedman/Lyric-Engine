@@ -31,6 +31,7 @@ usage:
   lyric-engine play   <song.lyrb> [flags]   full-screen lyric display synced to audio
   lyric-engine import <song.svp> [flags]    convert to .lyrb without the TUI
   lyric-engine info   <song.svp|song.lyrb>  print tracks / arranged lines
+  lyric-engine txt    <song.svp|song.lyrb>  export the lyrics as a plain .txt
 
 run "lyric-engine <command> -h" for flags.
 `
@@ -52,6 +53,8 @@ func main() {
 		err = cmdPlay(os.Args[2:])
 	case "info":
 		err = cmdInfo(os.Args[2:])
+	case "txt":
+		err = cmdTxt(os.Args[2:])
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -84,28 +87,14 @@ func cmdImport(args []string) error {
 	force := fs.Bool("f", false, "overwrite an existing output file")
 	wav := fs.String("audio", "", "WAV file to sync with (default: <song>.wav next to the .svp, if present)")
 	title := fs.String("title", "", "song title (default: file name)")
-	opt := lyr.DefaultImport
-	mode := fs.String("mode", "bars", `line mode: "bars" (every N bars) or "rests" (at rests/breaths)`)
-	fs.IntVar(&opt.Track, "track", opt.Track, "track index (-1 = the track with the most notes)")
-	fs.IntVar(&opt.BarsPerLine, "bars", opt.BarsPerLine, "bars per line (bars mode)")
-	fs.Float64Var(&opt.Pickup, "pickup", opt.Pickup, "beats before a bar line that count as the next line (bars mode)")
-	fs.Float64Var(&opt.LineGap, "line-gap", opt.LineGap, "seconds of rest that start a new line (rests mode)")
-	fs.Float64Var(&opt.StanzaGap, "stanza-gap", opt.StanzaGap, "seconds of rest that start a new stanza (0 = off)")
-	fs.BoolVar(&opt.GroupStanza, "group-stanza", opt.GroupStanza, "start a stanza at each SynthV note group (Verse, Chorus, ...)")
-	fs.IntVar(&opt.MaxChars, "max-chars", opt.MaxChars, "split longer lines in balanced parts (0 = off)")
-	backing := fs.Int("backing", -1, "track index whose lyrics are merged into the lines in (brackets) (-1 = none)")
+	importOptions := importFlags(fs)
 	in, err := parseWithFile(fs, args)
 	if err != nil {
 		return err
 	}
-	opt.BackingTrack = *backing + 1
-	switch *mode {
-	case "bars":
-		opt.Mode = lyr.ModeBars
-	case "rests":
-		opt.Mode = lyr.ModeRests
-	default:
-		return fmt.Errorf("-mode must be bars or rests")
+	opt, err := importOptions()
+	if err != nil {
+		return err
 	}
 	if *out == "" {
 		*out = lyr.LyrbPath(in)
@@ -134,6 +123,79 @@ func cmdImport(args []string) error {
 		fmt.Printf(", audio %s", song.AudioPath)
 	}
 	fmt.Println()
+	return nil
+}
+
+// importFlags registers the .svp parse settings on fs. The returned function
+// builds the options once fs has been parsed.
+func importFlags(fs *flag.FlagSet) func() (lyr.ImportOptions, error) {
+	opt := lyr.DefaultImport
+	mode := fs.String("mode", "bars", `line mode: "bars" (every N bars) or "rests" (at rests/breaths)`)
+	fs.IntVar(&opt.Track, "track", opt.Track, "track index (-1 = the track with the most notes)")
+	fs.IntVar(&opt.BarsPerLine, "bars", opt.BarsPerLine, "bars per line (bars mode)")
+	fs.Float64Var(&opt.Pickup, "pickup", opt.Pickup, "beats before a bar line that count as the next line (bars mode)")
+	fs.Float64Var(&opt.LineGap, "line-gap", opt.LineGap, "seconds of rest that start a new line (rests mode)")
+	fs.Float64Var(&opt.StanzaGap, "stanza-gap", opt.StanzaGap, "seconds of rest that start a new stanza (0 = off)")
+	fs.BoolVar(&opt.GroupStanza, "group-stanza", opt.GroupStanza, "start a stanza at each SynthV note group (Verse, Chorus, ...)")
+	fs.IntVar(&opt.MaxChars, "max-chars", opt.MaxChars, "split longer lines in balanced parts (0 = off)")
+	backing := fs.Int("backing", -1, "track index whose lyrics are merged into the lines in (brackets) (-1 = none)")
+	return func() (lyr.ImportOptions, error) {
+		opt.BackingTrack = *backing + 1
+		switch *mode {
+		case "bars":
+			opt.Mode = lyr.ModeBars
+		case "rests":
+			opt.Mode = lyr.ModeRests
+		default:
+			return opt, fmt.Errorf("-mode must be bars or rests")
+		}
+		return opt, nil
+	}
+}
+
+// cmdTxt writes the lyrics of a .svp (parsed with the import flags) or of an
+// arranged .lyrb as a plain text file.
+func cmdTxt(args []string) error {
+	fs := flag.NewFlagSet("txt", flag.ExitOnError)
+	out := fs.String("o", "", `output .txt (default: next to the input; "-" = stdout)`)
+	force := fs.Bool("f", false, "overwrite an existing output file")
+	stamps := fs.Bool("timestamps", false, "prefix each line with its start time as [mm:ss.xx]")
+	importOptions := importFlags(fs)
+	in, err := parseWithFile(fs, args)
+	if err != nil {
+		return err
+	}
+	var song *lyr.Song
+	if strings.EqualFold(filepath.Ext(in), ".svp") {
+		opt, err := importOptions()
+		if err != nil {
+			return err
+		}
+		proj, err := svp.ParseFile(in)
+		if err != nil {
+			return err
+		}
+		if song, err = lyr.Import(proj, opt); err != nil {
+			return err
+		}
+	} else if song, err = lyr.Open(in); err != nil {
+		return err
+	}
+	text := render.PlainText(song, *stamps)
+	if *out == "-" {
+		_, err := fmt.Print(text)
+		return err
+	}
+	if *out == "" {
+		*out = strings.TrimSuffix(in, filepath.Ext(in)) + ".txt"
+	}
+	if _, err := os.Stat(*out); err == nil && !*force {
+		return fmt.Errorf("%s exists (use -f to overwrite)", *out)
+	}
+	if err := os.WriteFile(*out, []byte(text), 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("wrote %s: %d lines\n", *out, strings.Count(text, "\n"))
 	return nil
 }
 

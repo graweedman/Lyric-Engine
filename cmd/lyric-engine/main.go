@@ -22,6 +22,9 @@ import (
 	"github.com/graweedman/lyric-engine/internal/window"
 )
 
+// version is set at release build time with -ldflags "-X main.version=...".
+var version = "dev"
+
 const usage = `lyric-engine — SynthV lyrics → terminal lyric display
 
 usage:
@@ -32,6 +35,7 @@ usage:
   lyric-engine import <song.svp> [flags]    convert to .lyrb without the TUI
   lyric-engine info   <song.svp|song.lyrb>  print tracks / arranged lines
   lyric-engine txt    <song.svp|song.lyrb>  export the lyrics as a plain .txt
+  lyric-engine version                      print the version
 
 run "lyric-engine <command> -h" for flags.
 `
@@ -55,6 +59,8 @@ func main() {
 		err = cmdInfo(os.Args[2:])
 	case "txt":
 		err = cmdTxt(os.Args[2:])
+	case "version", "-v", "--version":
+		fmt.Println("lyric-engine", version)
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:

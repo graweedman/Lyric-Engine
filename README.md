@@ -4,6 +4,10 @@ SynthV (`.svp`) lyrics → arranged `.lyrb` file → karaoke-style lyric display
 
 ## Install
 
+Download a prebuilt binary for Windows, macOS or Linux from [Releases](https://github.com/graweedman/Lyric-Engine/releases/latest), unzip it, and run `lyric-engine`. On macOS, the first run may need right-click → Open, or `xattr -d com.apple.quarantine lyric-engine`, since the binary is unsigned.
+
+Or with Go:
+
 ```sh
 go install github.com/graweedman/lyric-engine/cmd/lyric-engine@latest
 ```

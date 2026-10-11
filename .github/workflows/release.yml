@@ -1,0 +1,50 @@
+name: Release
+
+# Push a tag like v1.0.0 to build binaries and publish them as a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - run: go test ./...
+      - name: Build
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+          mkdir dist
+          # target / cgo: Linux audio needs cgo (ALSA), so it is built natively;
+          # Windows and macOS cross-compile without it.
+          for t in windows/amd64/0 windows/arm64/0 darwin/amd64/0 darwin/arm64/0 linux/amd64/1; do
+            IFS=/ read -r os arch cgo <<< "$t"
+            name="lyric-engine_${VERSION}_${os}_${arch}"
+            exe=lyric-engine
+            [ "$os" = windows ] && exe=lyric-engine.exe
+            mkdir -p "build/$name"
+            GOOS=$os GOARCH=$arch CGO_ENABLED=$cgo go build -trimpath \
+              -ldflags "-s -w -X main.version=$VERSION" \
+              -o "build/$name/$exe" ./cmd/lyric-engine
+            cp README.md LICENSE "build/$name/"
+            if [ "$os" = windows ]; then
+              (cd build && zip -qr "../dist/$name.zip" "$name")
+            else
+              tar -czf "dist/$name.tar.gz" -C build "$name"
+            fi
+          done
+          (cd dist && sha256sum * > checksums.txt)
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

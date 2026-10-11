@@ -1,0 +1,19 @@
+# Build output
+*.exe
+/lyric-engine
+/dist/
+
+# Temp files
+*.lyrb.tmp
+
+# Local song projects and audio (only examples/ is published)
+/*.wav
+/*.svp
+/*.lyrb
+
+# Editor / environment
+.venv/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

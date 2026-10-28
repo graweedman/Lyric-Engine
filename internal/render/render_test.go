@@ -87,3 +87,56 @@ func TestPlainText(t *testing.T) {
 		t.Errorf("PlainText timestamps = %q, want %q", got, want)
 	}
 }
+
+func TestLargeFocusView(t *testing.T) {
+	s := &lyr.Song{Display: lyr.DefaultDisplay, Tokens: []lyr.Token{
+		{Start: 0, End: 500, Text: "hello", Break: lyr.BreakStanza},
+		{Start: 500, End: 1000, Text: "big"},
+		{Start: 1000, End: 1500, Text: "world"},
+	}}
+	s.Display.Large = true
+	s.Touch()
+
+	// In the player each wrapped row is a top and a bottom half that fit
+	// in half the width; every other row is reset to normal size.
+	th := DefaultTheme
+	th.DECLines = true
+	rows := strings.Split(Frame(s, 700, 20, 12, th), "\n")
+	if len(rows) != 12 {
+		t.Fatalf("%d rows, want 12", len(rows))
+	}
+	var halves []string
+	for i, r := range rows {
+		switch {
+		case strings.HasPrefix(r, decTop):
+			if i+1 >= len(rows) || rows[i+1] != decBottom+r[len(decTop):] {
+				t.Fatalf("row %d: top half without its bottom half", i)
+			}
+			halves = append(halves, strings.TrimSpace(ansi.Strip(r[len(decTop):])))
+			if w := lipgloss.Width(r); w >= 10 {
+				t.Errorf("row %d is %d wide, want under half of 20", i, w)
+			}
+		case strings.HasPrefix(r, decBottom):
+		case !strings.HasPrefix(r, SingleRow):
+			t.Errorf("row %d has no line size: %q", i, r)
+		}
+	}
+	if got := strings.Join(strings.Fields(strings.Join(halves, " ")), " "); got != "hello big world" {
+		t.Errorf("large rows = %q", got)
+	}
+
+	// The editor preview wraps the same way, with a blank row between.
+	prev := strings.Split(ansi.Strip(Frame(s, 700, 20, 12, DefaultTheme)), "\n")
+	var text []string
+	for _, r := range prev {
+		if strings.Contains(r, "\x1b#") {
+			t.Fatal("preview uses DEC line attributes")
+		}
+		if r = strings.TrimSpace(r); r != "" {
+			text = append(text, r)
+		}
+	}
+	if got := strings.Join(text, " "); got != "hello big world" || len(text) < 2 {
+		t.Errorf("preview rows = %q", text)
+	}
+}

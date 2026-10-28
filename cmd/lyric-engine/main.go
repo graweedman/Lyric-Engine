@@ -224,6 +224,7 @@ func cmdPlay(args []string) error {
 	wav := fs.String("audio", "", "override the WAV file")
 	noAudio := fs.Bool("no-audio", false, "run on a silent clock")
 	noStatus := fs.Bool("no-status", false, "hide the time/progress line")
+	large := fs.Bool("large", false, "draw the focus view in double-size text (as the editor's L)")
 	aspect := fs.String("aspect", "7:9", `resize the terminal window to width:height at full screen height ("off" keeps the window); the display always uses this shape`)
 	dock := fs.String("dock", "right", "where the resized window goes: left, right or center")
 	obsAddr := fs.String("obs", "localhost:4455", `OBS WebSocket address to record the playback with ("off" disables)`)
@@ -247,6 +248,9 @@ func cmdPlay(args []string) error {
 	}
 	if *noAudio {
 		song.AudioPath = ""
+	}
+	if *large {
+		song.Display.Large = true
 	}
 	p, warn := audio.Open(lyr.Resolve(in, song.AudioPath), int64(song.Duration())+2000)
 	if resize {
@@ -331,7 +335,11 @@ func cmdInfo(args []string) error {
 		}
 		fmt.Println()
 	}
-	fmt.Printf("view: %s\n", song.Display.View)
+	if song.Display.Large {
+		fmt.Printf("view: %s, large text\n", song.Display.View)
+	} else {
+		fmt.Printf("view: %s\n", song.Display.View)
+	}
 	for _, m := range song.Meta {
 		fmt.Printf("%s: %s\n", m.Key, m.Value)
 	}

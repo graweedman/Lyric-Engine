@@ -27,6 +27,12 @@ type Theme struct {
 	BackUnsung lipgloss.Style // unsung part of (backing vocals) in the current line
 	HUDLabel   lipgloss.Style // analysis readout: field names and rules
 	HUDValue   lipgloss.Style // analysis readout: values
+
+	// DECLines draws the large focus view with DEC double-size lines, which
+	// the terminal running the player must support (Windows Terminal,
+	// xterm, …). Without it the large view is approximated by wrapping at
+	// half width and spacing the rows, as in the editor preview.
+	DECLines bool
 }
 
 var DefaultTheme = Theme{
@@ -154,12 +160,66 @@ func ActiveMessage(s *lyr.Song, t int64) int {
 // Frame renders the display for lyric time t into a w×h block.
 func Frame(s *lyr.Song, t int64, w, h int, th Theme) string {
 	th = th.ForSong(s)
+	var hud []string
 	if s.Display.HUD {
-		if hud := HUD(s, t, w, th); len(hud)+1 < h {
-			return strings.Join(hud, "\n") + "\n" + frame(s, t, w, h-len(hud), th)
+		if hud = HUD(s, t, w, th); len(hud)+1 >= h {
+			hud = nil
 		}
 	}
-	return frame(s, t, w, h, th)
+	out := frame(s, t, w, h-len(hud), th)
+	if hud != nil {
+		out = strings.Join(hud, "\n") + "\n" + out
+	}
+	if th.DECLines {
+		// Every row sets its own size, so rows that were double-size in
+		// the previous frame go back to normal.
+		rows := strings.Split(out, "\n")
+		for i, r := range rows {
+			if !strings.HasPrefix(r, "\x1b#") {
+				rows[i] = SingleRow + r
+			}
+		}
+		out = strings.Join(rows, "\n")
+	}
+	return out
+}
+
+// DEC line attributes: the top and bottom halves of a double-size row,
+// and a normal row. Callers adding rows of their own below a DECLines
+// frame start them with SingleRow.
+const (
+	decTop    = "\x1b#3"
+	decBottom = "\x1b#4"
+	SingleRow = "\x1b#5"
+)
+
+// largeFrame lays out the focus view's rows in double-size text: wrapped
+// to half the width, each row drawn as a top and a bottom half. Without
+// DEC lines each row is followed by a blank one instead.
+func largeFrame(out []string, w, h int, th Theme) string {
+	// One cell short of the half width, so a row never ends on the last
+	// column, where the terminal's erase-to-end-of-line would clear it.
+	wrap := lipgloss.NewStyle().Width(w/2 - 1).Align(lipgloss.Center)
+	var rows []string
+	for _, o := range out {
+		for _, r := range strings.Split(wrap.Render(o), "\n") {
+			if th.DECLines {
+				r = strings.TrimRight(r, " ")
+				rows = append(rows, decTop+r, decBottom+r)
+			} else {
+				rows = append(rows, lipgloss.PlaceHorizontal(w, lipgloss.Center, r), "")
+			}
+		}
+	}
+	if !th.DECLines && len(rows) > 0 {
+		rows = rows[:len(rows)-1] // no spacer below the last row
+	}
+	top := max(0, (h-len(rows))/2)
+	rows = append(make([]string, top, h), rows...)
+	for len(rows) < h {
+		rows = append(rows, "")
+	}
+	return strings.Join(rows, "\n")
 }
 
 func frame(s *lyr.Song, t int64, w, h int, th Theme) string {
@@ -187,6 +247,9 @@ func frame(s *lyr.Song, t int64, w, h int, th Theme) string {
 				out = append(out, th.Upcoming.Render(LineText(s, li)))
 			}
 		}
+	}
+	if s.Display.Large && w >= 8 {
+		return largeFrame(out, w, h, th)
 	}
 	block := lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Render(strings.Join(out, "\n"))
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, block)

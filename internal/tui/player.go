@@ -77,6 +77,8 @@ func (m *Player) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.player.Toggle()
 		case "a": // for this playback only; the editor saves it
 			m.song.Display.HUD = !m.song.Display.HUD
+		case "L":
+			m.song.Display.Large = !m.song.Display.Large
 		case "left":
 			m.player.SeekTo(m.player.Position() - 5000)
 		case "right":
@@ -107,9 +109,11 @@ func (m *Player) View() string {
 		h--
 	}
 	t := m.player.Position() - int64(m.song.AudioOffsetMs)
-	out := render.Frame(m.song, t, w, max(1, h), render.DefaultTheme)
+	th := render.DefaultTheme
+	th.DECLines = true
+	out := render.Frame(m.song, t, w, max(1, h), th)
 	if m.showStatus || bottom != "" {
-		out += "\n" + lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Foreground(lipgloss.Color("#4e4e4e")).Render(bottom)
+		out += "\n" + render.SingleRow + lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Foreground(lipgloss.Color("#4e4e4e")).Render(bottom)
 	}
 	return out
 }

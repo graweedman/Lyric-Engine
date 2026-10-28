@@ -98,6 +98,8 @@ type Display struct {
 	LeadColor, BackColor uint32
 	// HUD shows the analysis readout (BPM, key, bar/beat, note) on top.
 	HUD bool
+	// Large draws the focus view in double-size text.
+	Large bool
 }
 
 // Song is the full document.

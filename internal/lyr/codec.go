@@ -51,7 +51,7 @@ import (
 //	 88  u16  tempo point count
 //	 90  u16  meter point count
 //	 92  u8   key tonic pitch class (0 = C … 11 = B)
-//	 93  u8   flags (bit0 minor key, bit1 analysis readout shown)
+//	 93  u8   flags (bit0 minor key, bit1 analysis readout shown, bit2 large focus view)
 //	 94  u8   lowest sung note (MIDI; 0 = unknown)
 //	 95  u8   highest sung note
 //	 96  f32  key score (correlation; 0 = no key detected)
@@ -98,6 +98,7 @@ const (
 
 	anaMinor = 1 << 0
 	anaHUD   = 1 << 1
+	anaLarge = 1 << 2
 )
 
 var ErrFormat = errors.New("lyrb: invalid file")
@@ -228,6 +229,9 @@ func Encode(s *Song) []byte {
 	if s.Display.HUD {
 		out[93] |= anaHUD
 	}
+	if s.Display.Large {
+		out[93] |= anaLarge
+	}
 	out[94], out[95] = an.Low, an.High
 	le.PutUint32(out[96:], math.Float32bits(an.Key.Score))
 	var anaRecs []byte
@@ -353,6 +357,7 @@ func Decode(data []byte) (*Song, error) {
 		an.Key = Key{Tonic: data[92] % 12, Minor: data[93]&anaMinor != 0,
 			Score: math.Float32frombits(le.Uint32(data[96:]))}
 		s.Display.HUD = data[93]&anaHUD != 0
+		s.Display.Large = data[93]&anaLarge != 0
 		an.Low, an.High = data[94], data[95]
 		for i := range nTempo {
 			b := data[tempoOff+i*tempoSize:]

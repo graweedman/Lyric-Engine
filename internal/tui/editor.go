@@ -240,6 +240,12 @@ func (e *Editor) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		e.changed()
 		e.flash("analysis readout: " + onOff(e.song.Display.HUD))
 		return e, nil
+	case "L":
+		e.push()
+		e.song.Display.Large = !e.song.Display.Large
+		e.changed()
+		e.flash("large text: " + onOff(e.song.Display.Large))
+		return e, nil
 	case "up", "k", "down", "j", "pgup", "pgdown":
 		d := map[string]int{"up": -1, "k": -1, "down": 1, "j": 1, "pgup": -e.listHeight(), "pgdown": e.listHeight()}[key]
 		e.rowStep(d)
@@ -644,6 +650,8 @@ func (e *Editor) transport(w int) string {
 	view := fmt.Sprintf("ctx %d/%d", e.song.Display.Before, e.song.Display.After)
 	if e.song.Display.View == lyr.ViewLog {
 		view = "log view"
+	} else if e.song.Display.Large {
+		view += " large"
 	}
 	right := fmt.Sprintf(" offset %+dms  %s  %s%s ", e.song.AudioOffsetMs, view, follow, audio)
 	barW := w - lipgloss.Width(left) - lipgloss.Width(right)

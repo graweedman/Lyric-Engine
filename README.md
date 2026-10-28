@@ -133,6 +133,7 @@ BPM and the bar follow tempo and time-signature changes. The dots tick along wit
 | n | add an empty line (log view only; placed like `m`) |
 | v | switch the display between the focus view and the log view |
 | a | show/hide the analysis readout (BPM, key, bar/beat, note, range) |
+| L | large text: double-size lyrics in the focus view |
 | i | song info: title, artist, album, vocalist, lyrics/music by, year, comment, audio file |
 | R | re-parse with different settings (undo with u) |
 | o | open another file |
@@ -161,6 +162,7 @@ Story messages are free text lines that pop up at a set moment, for example in a
 ## Display views
 
 - **focus** (default): the current line is centered, with context lines above and below (`d` changes how many). A story message pops up alone as a card until the next line starts, for at most 8 s.
+  Press `L` for **large text**: the focus view is drawn in double-size letters (twice as tall and wide), wrapping at half the width. The player uses the terminal's double-size lines (DEC DECDHL), which Windows Terminal and xterm support; the editor preview shows the same line breaks with a blank row between them. `L` also works during `play`, for that playback only.
 - **log**: lines pile up from the top and scroll up when the screen is full. The line being sung gets the karaoke wipe, finished lines dim, stanzas are separated by a blank line, and story messages stay in the scrollback in their colors.
 
 Both views show the title, artist and credits (vocalist, music by, lyrics by; one line when the same person wrote both) before the first line. In the focus view they appear as a card until 3 s before singing starts; in the log view they stay at the top until the log scrolls past them.

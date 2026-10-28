@@ -68,12 +68,12 @@ func TestAnalysisRoundTrip(t *testing.T) {
 		Key:   Key{Tonic: 1, Minor: true, Score: 0.87},
 		Low:   55, High: 81,
 	}
-	s.Display.HUD = true
+	s.Display.HUD, s.Display.Large = true, true
 	got, err := Decode(Encode(s))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(got.Analysis, s.Analysis) || !got.Display.HUD {
+	if !reflect.DeepEqual(got.Analysis, s.Analysis) || !got.Display.HUD || !got.Display.Large {
 		t.Errorf("analysis:\n got %+v\nwant %+v", got.Analysis, s.Analysis)
 	}
 }

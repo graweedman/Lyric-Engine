@@ -266,7 +266,7 @@ func TestAddBacking(t *testing.T) {
 
 func TestVoiceColor(t *testing.T) {
 	cases := map[string]uint32{
-		"Kasane Teto": 0xff5f5f, "GUMI AI 2": 0x87d75f, "gumi (English)": 0x87d75f,
+		"Kasane Teto": 0xff5f5f, "重音テト": 0xff5f5f, "GUMI AI 2": 0x87d75f, "gumi (English)": 0x87d75f,
 		"Natsuki Karin": 0, "Solaria": 0, "": 0,
 	}
 	for voice, want := range cases {

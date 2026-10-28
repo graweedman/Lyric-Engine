@@ -173,9 +173,14 @@ var voiceColors = []struct {
 	{"rin", 0xffd75f},   // yellow
 	{"len", 0xffd75f},   // yellow
 	{"kaito", 0x5f87ff}, // blue
+	// Japanese names, as UTAU / OpenUtau singers are often called.
+	{"重音テト", 0xff5f5f}, {"テト", 0xff5f5f},
+	{"初音ミク", 0x5fd7d7}, {"ミク", 0x5fd7d7},
+	{"巡音ルカ", 0xff87d7}, {"ルカ", 0xff87d7},
+	{"鏡音リン", 0xffd75f}, {"鏡音レン", 0xffd75f},
 }
 
-// VoiceColor is the default lyric color for a SynthV voice, or 0 (the
+// VoiceColor is the default lyric color for a SynthV or UTAU voice, or 0 (the
 // theme's default) for voices without one.
 func VoiceColor(voice string) uint32 {
 	words := strings.FieldsFunc(strings.ToLower(voice), func(r rune) bool { return !unicode.IsLetter(r) })

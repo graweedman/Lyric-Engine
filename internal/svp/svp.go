@@ -1,5 +1,6 @@
-// Package svp parses Synthesizer V Studio project files (.svp) into a flat,
-// time-sorted list of notes with absolute times in seconds.
+// Package svp parses singing synth projects — Synthesizer V Studio (.svp)
+// and OpenUtau (.ustx) — into a flat, time-sorted list of notes with
+// absolute times in seconds.
 package svp
 
 import (
@@ -7,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -78,23 +81,29 @@ func (p *Project) BeatsToBars(bar, beats float64) float64 {
 
 type rawFile struct {
 	Time struct {
-		Meter []struct {
-			Index       int `json:"index"` // measure where the signature starts
-			Numerator   int `json:"numerator"`
-			Denominator int `json:"denominator"`
-		} `json:"meter"`
-		Tempo []struct {
-			Position float64 `json:"position"`
-			BPM      float64 `json:"bpm"`
-		} `json:"tempo"`
+		Meter []rawMeter `json:"meter"`
+		Tempo []rawTempo `json:"tempo"`
 	} `json:"time"`
 	Library []rawGroup `json:"library"`
-	Tracks  []struct {
-		Name      string   `json:"name"`
-		MainGroup rawGroup `json:"mainGroup"`
-		MainRef   rawRef   `json:"mainRef"`
-		Groups    []rawRef `json:"groups"`
-	} `json:"tracks"`
+	Tracks  []rawTrack `json:"tracks"`
+}
+
+type rawMeter struct {
+	Index       int `json:"index"` // measure where the signature starts
+	Numerator   int `json:"numerator"`
+	Denominator int `json:"denominator"`
+}
+
+type rawTempo struct {
+	Position float64 `json:"position"` // blicks
+	BPM      float64 `json:"bpm"`
+}
+
+type rawTrack struct {
+	Name      string   `json:"name"`
+	MainGroup rawGroup `json:"mainGroup"`
+	MainRef   rawRef   `json:"mainRef"`
+	Groups    []rawRef `json:"groups"`
 }
 
 type rawGroup struct {
@@ -136,11 +145,22 @@ type rawNote struct {
 	Pitch    int     `json:"pitch"`
 }
 
-// ParseFile reads and parses an .svp file.
+// Exts are the project file extensions ParseFile understands.
+var Exts = []string{".svp", ".ustx"}
+
+// IsProject reports whether path has a project extension (.svp or .ustx).
+func IsProject(path string) bool {
+	return slices.Contains(Exts, strings.ToLower(filepath.Ext(path)))
+}
+
+// ParseFile reads and parses an .svp or OpenUtau .ustx file.
 func ParseFile(path string) (*Project, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
+	}
+	if strings.EqualFold(filepath.Ext(path), ".ustx") {
+		return ParseUSTX(data)
 	}
 	return Parse(data)
 }
@@ -155,7 +175,11 @@ func Parse(data []byte) (*Project, error) {
 	if err := json.Unmarshal(data, &f); err != nil {
 		return nil, fmt.Errorf("svp: %w", err)
 	}
+	return build(f), nil
+}
 
+// build resolves a project to wall-clock notes.
+func build(f rawFile) *Project {
 	tm := newTempoMap(f)
 	lib := make(map[string]rawGroup, len(f.Library))
 	for _, g := range f.Library {
@@ -195,7 +219,7 @@ func Parse(data []byte) (*Project, error) {
 		sort.SliceStable(tr.Notes, func(i, j int) bool { return tr.Notes[i].Start < tr.Notes[j].Start })
 		p.Tracks = append(p.Tracks, tr)
 	}
-	return p, nil
+	return p
 }
 
 // BestTrack returns the index of the track with the most notes.

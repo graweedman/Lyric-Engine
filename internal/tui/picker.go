@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/graweedman/lyric-engine/internal/lyr"
+	"github.com/graweedman/lyric-engine/internal/svp"
 )
 
 // openFileMsg asks the app to open a .svp (parse settings) or .lyrb (editor).
@@ -22,7 +23,7 @@ type pickEntry struct {
 	note string // e.g. "arranged" for an .svp that already has a .lyrb
 }
 
-// Picker browses directories for .svp and .lyrb files.
+// Picker browses directories for .svp, .ustx and .lyrb files.
 type Picker struct {
 	dir     string
 	entries []pickEntry
@@ -38,12 +39,12 @@ type Picker struct {
 	onCancel func() tea.Msg // nil: esc/q quits the program
 }
 
-// NewPicker browses for songs (.svp / .lyrb) starting at dir.
+// NewPicker browses for songs (.svp / .ustx / .lyrb) starting at dir.
 func NewPicker(dir string) *Picker {
 	p := &Picker{
 		title:  "open",
-		exts:   []string{".svp", ".lyrb"},
-		help:   "↑↓ select  enter open  ⌫ parent folder  q quit   ·   .svp → parse settings, .lyrb → editor",
+		exts:   append(slices.Clone(svp.Exts), ".lyrb"),
+		help:   "↑↓ select  enter open  ⌫ parent folder  q quit   ·   .svp/.ustx → parse settings, .lyrb → editor",
 		onPick: func(path string) tea.Msg { return openFileMsg{path} },
 	}
 	p.chdir(dir, "")
@@ -96,7 +97,7 @@ func (p *Picker) chdir(dir, focus string) {
 			continue
 		}
 		e := pickEntry{name: name}
-		if ext == ".svp" && names[strings.ToLower(filepath.Base(lyr.LyrbPath(name)))] {
+		if svp.IsProject(name) && names[strings.ToLower(filepath.Base(lyr.LyrbPath(name)))] {
 			e.note = "has .lyrb"
 		}
 		files = append(files, e)
@@ -209,7 +210,7 @@ func (p *Picker) View() string {
 		switch {
 		case e.dir:
 			label = stDir.Render(e.name + "/")
-		case strings.EqualFold(filepath.Ext(e.name), ".svp"):
+		case svp.IsProject(e.name):
 			label = stSvp.Render(e.name)
 		case strings.EqualFold(filepath.Ext(e.name), ".wav"):
 			label = stValue.Render(e.name)

@@ -1,4 +1,4 @@
-// Command lyric-engine imports Synthesizer V projects into the .lyrb lyric
+// Command lyric-engine imports Synthesizer V and OpenUtau projects into the .lyrb lyric
 // format, arranges them in a TUI editor, and plays them as a terminal lyric
 // display synced to a WAV.
 package main
@@ -25,12 +25,12 @@ import (
 // version is set at release build time with -ldflags "-X main.version=...".
 var version = "dev"
 
-const usage = `lyric-engine — SynthV lyrics → terminal lyric display
+const usage = `lyric-engine — SynthV / OpenUtau lyrics → terminal lyric display
 
 usage:
-  lyric-engine                              browse for a .svp/.lyrb (parse settings → editor)
+  lyric-engine                              browse for a .svp/.ustx/.lyrb (parse settings → editor)
   lyric-engine <song.lyrb>                  play it in a 7:9 window (also for drag-and-drop)
-  lyric-engine edit   <song.svp|song.lyrb>  open a file directly in the TUI
+  lyric-engine edit   <song.svp|song.lyrb>  open a file directly in the TUI (.ustx works too)
   lyric-engine play   <song.lyrb> [flags]   full-screen lyric display synced to audio
   lyric-engine import <song.svp> [flags]    convert to .lyrb without the TUI
   lyric-engine info   <song.svp|song.lyrb>  print tracks / arranged lines
@@ -65,11 +65,11 @@ func main() {
 		fmt.Print(usage)
 	default:
 		// A bare file (also what Windows passes for drag-and-drop or a file
-		// association): .lyrb plays, .svp opens the editor.
-		switch strings.ToLower(filepath.Ext(cmd)) {
-		case ".lyrb":
+		// association): .lyrb plays, .svp / .ustx opens the editor.
+		switch {
+		case strings.EqualFold(filepath.Ext(cmd), ".lyrb"):
 			err = cmdPlay(os.Args[1:])
-		case ".svp":
+		case svp.IsProject(cmd):
 			err = cmdEdit(os.Args[1:])
 		default:
 			fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", cmd, usage)
@@ -172,7 +172,7 @@ func cmdTxt(args []string) error {
 		return err
 	}
 	var song *lyr.Song
-	if strings.EqualFold(filepath.Ext(in), ".svp") {
+	if svp.IsProject(in) {
 		opt, err := importOptions()
 		if err != nil {
 			return err
@@ -294,7 +294,7 @@ func cmdInfo(args []string) error {
 	if err != nil {
 		return err
 	}
-	if strings.EqualFold(filepath.Ext(in), ".svp") {
+	if svp.IsProject(in) {
 		proj, err := svp.ParseFile(in)
 		if err != nil {
 			return err

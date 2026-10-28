@@ -2,12 +2,12 @@ package tui
 
 import (
 	"path/filepath"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/graweedman/lyric-engine/internal/audio"
 	"github.com/graweedman/lyric-engine/internal/lyr"
+	"github.com/graweedman/lyric-engine/internal/svp"
 )
 
 // App is the interactive program: file picker → parse settings → editor.
@@ -27,7 +27,7 @@ func NewApp(dir string) *App {
 	return a
 }
 
-// NewAppWith opens path directly (.svp → settings, .lyrb → editor). The
+// NewAppWith opens path directly (.svp/.ustx → settings, .lyrb → editor). The
 // picker starts in the file's folder. wav optionally overrides the audio.
 func NewAppWith(path, wav string) (*App, error) {
 	a := NewApp(filepath.Dir(path))
@@ -49,7 +49,7 @@ func (a *App) show(m tea.Model) {
 
 // open routes a file to the right screen.
 func (a *App) open(path, wav string) error {
-	if strings.EqualFold(filepath.Ext(path), ".svp") {
+	if svp.IsProject(path) {
 		cfg, err := NewConfig(path, lyr.LyrbPath(path), lyr.DefaultImport, wav, false)
 		if err != nil {
 			return err

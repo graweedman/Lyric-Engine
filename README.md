@@ -1,6 +1,6 @@
 # lyric-engine
 
-SynthV (`.svp`) lyrics → arranged `.lyrb` file → karaoke-style lyric display in the terminal, synced to a WAV.
+SynthV (`.svp`) or OpenUtau (`.ustx`) lyrics → arranged `.lyrb` file → karaoke-style lyric display in the terminal, synced to a WAV.
 
 ## Install
 
@@ -47,6 +47,17 @@ Choosing an `.svp` opens **parse settings**. It shows a live preview of the line
 Notes with lyric `-` (melisma) or `+` (next syllable of a word) extend the previous word. `br`, `sil`, `sp`, `pau`, `cl`, `'`, and `.phoneme` notes are dropped. Adjacent CJK syllables are joined without spaces. A stanza clears the screen during the instrumental gap before it.
 
 The karaoke wipe follows the SVP notes. Each syllable note of a word (the word note and each `+`) fills an equal share of its letters over exactly that note's duration. `-` notes extend the syllable before them, and the wipe pauses during rests between a word's notes.
+
+## OpenUtau
+
+OpenUtau projects (`.ustx`) work anywhere an `.svp` does: the browser, `edit`, `import`, `info`, `txt`, and drag-and-drop. They are parsed the same way, with the same settings:
+
+- Each voice part counts as a note group, so **Stanza per group** starts a stanza at each part.
+- `+`, `+~` and `+*` notes extend the previous note (SynthV's `-`), and `R` is a rest.
+- Phonetic hints (`read[r iy d]`) are dropped from the text, and so is the leading vowel of VCV lyrics (`a か` → `か`).
+- Muted tracks are ignored. The track's singer picks the lyric color, including the Japanese names (重音テト, 初音ミク, …).
+
+Classic UTAU `.ust` files are not read directly. Open them in OpenUtau and save them as `.ustx`.
 
 ## Text export
 
